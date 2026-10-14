@@ -109,4 +109,4 @@ if __name__ == "__main__":
     shot("menu-idle.png", [{"pid": 1, "name": "sync-backoff", "status": "idle"}])
     shot("menu-busy.png", [{"pid": 1, "name": "sync-backoff", "status": "busy"}])
     shot("menu-multi.png", [{"pid": 1, "name": "sync-backoff", "status": "idle"},
-                            {"pid": 2, "name": "docs-cleanup", "status": "busy"}], H=560)
+                            {"pid": 2, "name": "docs-cleanup", "status": "busy"}], H=700)

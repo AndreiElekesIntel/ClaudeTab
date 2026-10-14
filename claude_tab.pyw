@@ -36,12 +36,15 @@ HANDLE_W, HANDLE_H = 74, 22
 OFFSET_RIGHT = 150     # keeps the handle clear of min/max/close
 OFFSET_TOP = 6
 MODELS = {"Opus": "opus", "Sonnet": "sonnet"}
+# label -> /effort argument. "max" lasts for the session only (Claude Code's rule).
+EFFORTS = {"Low": "low", "Med": "medium", "High": "high", "XHigh": "xhigh", "Max": "max"}
 # Argument-less commands. /rename with no name lets Claude Code pick one.
 SIMPLE = {"rename": "/rename", "compact": "/compact", "clear": "/clear"}
 # Commands Claude Code runs immediately even mid-turn, so they are offered while busy.
-ANYTIME = {"/rename"}
-# Commands that stop at an "are you sure?" prompt. Both model switches do.
-CONFIRMED = {"/model opus", "/model sonnet"}
+ANYTIME = {"/rename"} | {f"/effort {a}" for a in EFFORTS.values()}
+# Commands that may stop at an "are you sure?" prompt: the model switches always do,
+# /effort does when it has to warn about the prompt cache.
+CONFIRMED = {"/model opus", "/model sonnet"} | {f"/effort {a}" for a in EFFORTS.values()}
 # Enter is pressed at each of these delays. The prompt takes a variable time to
 # draw, so one fixed delay is either slow or early; an Enter that lands before
 # the prompt (or after it is answered) hits an empty input box and does nothing.
@@ -183,6 +186,8 @@ def build_command(action, arg):
     """Allowlisted slash command, or None. Never a newline."""
     if action == "model" and arg in MODELS.values():
         return f"/model {arg}"
+    if action == "effort" and arg in EFFORTS.values():
+        return f"/effort {arg}"
     if action in SIMPLE:
         return SIMPLE[action]
     return None
@@ -334,7 +339,7 @@ class App:
         tk.Label(head, text=" " + sess["name"][:28], bg=BG, fg=FG, font=FONT_B, anchor="w").pack(side="left")
         tk.Label(head, text=sess["status"], bg=BG, fg=MUTED, font=FONT_S).pack(side="right")
         if not idle:
-            tk.Label(body, text="Busy — only Rename works until it is idle", bg=BG, fg=MUTED,
+            tk.Label(body, text="Busy — only Rename and Effort work until it is idle", bg=BG, fg=MUTED,
                      font=FONT_S, anchor="w").pack(fill="x", padx=8, pady=(0, 2))
         self.section(body, "SESSION")
         self.item(body, "✎", "Rename", "/rename", True, lambda: self.pick(sess, "rename"))
@@ -343,10 +348,24 @@ class App:
         self.section(body, "MODEL")
         for label, alias in MODELS.items():
             self.item(body, "◆", label, f"/model {alias}", idle, lambda a=alias: self.pick(sess, "model", a))
+        self.section(body, "EFFORT")
+        self.chips(body, [(label, lambda a=arg: self.pick(sess, "effort", a)) for label, arg in EFFORTS.items()])
 
     def section(self, body, text):
         tk.Label(body, text=text, bg=BG, fg=DIM, font=("Segoe UI Semibold", 7), anchor="w").pack(
             fill="x", padx=8, pady=(6, 1))
+
+    def chips(self, body, buttons):
+        """A row of small buttons, equal width, for short choices like effort levels."""
+        row = tk.Frame(body, bg=BG, width=MENU_W)
+        row.pack(fill="x", padx=6, pady=(2, 4))
+        for n, (label, command) in enumerate(buttons):
+            row.columnconfigure(n, weight=1, uniform="chip")
+            b = tk.Label(row, text=label, bg=HOVER, fg=FG, font=FONT_S, pady=5, cursor="hand2")
+            b.grid(row=0, column=n, sticky="ew", padx=2)
+            b.bind("<Enter>", lambda _e, w=b: w.configure(bg=ACCENT, fg="#101322"))
+            b.bind("<Leave>", lambda _e, w=b: w.configure(bg=HOVER, fg=FG))
+            b.bind("<ButtonRelease-1>", lambda _e, c=command: c())
 
     def item(self, body, icon, label, hint, enabled, command, danger=False):
         fg = (DANGER if danger else FG) if enabled else DIM
