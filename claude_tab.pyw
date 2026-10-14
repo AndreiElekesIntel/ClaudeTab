@@ -37,9 +37,9 @@ OFFSET_RIGHT = 150     # keeps the handle clear of min/max/close
 OFFSET_TOP = 6
 MODELS = {"Opus": "opus", "Sonnet": "sonnet"}
 # label -> /effort argument. "max" lasts for the session only (Claude Code's rule).
-EFFORTS = {"Low": "low", "Med": "medium", "High": "high", "XHigh": "xhigh", "Max": "max"}
+EFFORTS = {"Low": "low", "Med": "medium", "High": "high", "XHigh": "xhigh", "Max": "max", "Auto": "auto"}
 # Argument-less commands. /rename with no name lets Claude Code pick one.
-SIMPLE = {"rename": "/rename", "compact": "/compact", "clear": "/clear"}
+SIMPLE = {"rename": "/rename", "compact": "/compact", "clear": "/clear", "plan": "/plan"}
 # Commands Claude Code runs immediately even mid-turn, so they are offered while busy.
 ANYTIME = {"/rename"} | {f"/effort {a}" for a in EFFORTS.values()}
 # Commands that may stop at an "are you sure?" prompt: the model switches always do,
@@ -50,11 +50,14 @@ CONFIRMED = {"/model opus", "/model sonnet"} | {f"/effort {a}" for a in EFFORTS.
 # the prompt (or after it is answered) hits an empty input box and does nothing.
 CONFIRM_DELAYS_MS = (350, 700, 1100)
 
-# Dropdown look. Dark, like the terminal it sits on.
-BG, BORDER, HOVER = "#1e2130", "#363b52", "#2c3248"
-FG, MUTED, DIM, DANGER, ACCENT = "#e8eaf2", "#8b91a8", "#565c75", "#f2777a", "#8b8bf0"
+# Dropdown look. Dark, flat, one accent colour, like the terminal it sits on.
+BG, BORDER, HOVER, SEG = "#171a26", "#2a2f45", "#20243a", "#1f2336"
+FG, MUTED, DIM, DANGER, ACCENT = "#e9ebf5", "#9097b3", "#5a6080", "#f27d83", "#8b8bf5"
+GOOD, GOOD_BG, WARN, WARN_BG = "#6fdca0", "#163226", "#f2b862", "#38301a"
 FONT, FONT_B, FONT_S = ("Segoe UI", 10), ("Segoe UI Semibold", 10), ("Segoe UI", 8)
-MENU_W = 230
+FONT_CAP = ("Segoe UI Semibold", 7)
+ICONS = "Segoe MDL2 Assets"  # ships with Windows 10 and 11
+MENU_W = 264
 
 k32 = ctypes.WinDLL("kernel32", use_last_error=True)
 u32 = ctypes.WinDLL("user32", use_last_error=True)
@@ -334,63 +337,66 @@ class App:
     def session_block(self, body, sess):
         idle = sess["status"] == "idle"
         head = tk.Frame(body, bg=BG)
-        head.pack(fill="x", padx=6, pady=(2, 4))
-        tk.Label(head, text="●", bg=BG, fg="#5fd38d" if idle else "#f0b45a", font=FONT_S).pack(side="left")
-        tk.Label(head, text=" " + sess["name"][:28], bg=BG, fg=FG, font=FONT_B, anchor="w").pack(side="left")
-        tk.Label(head, text=sess["status"], bg=BG, fg=MUTED, font=FONT_S).pack(side="right")
+        head.pack(fill="x", padx=8, pady=(4, 2))
+        tk.Label(head, text=sess["name"][:26], bg=BG, fg=FG, font=("Segoe UI Semibold", 11), anchor="w").pack(side="left")
+        tk.Label(head, text=f" {sess['status']} ", bg=GOOD_BG if idle else WARN_BG, fg=GOOD if idle else WARN,
+                 font=FONT_CAP).pack(side="right")
         if not idle:
-            tk.Label(body, text="Busy — only Rename and Effort work until it is idle", bg=BG, fg=MUTED,
+            tk.Label(body, text="Busy: only Rename and Effort work right now", bg=BG, fg=MUTED,
                      font=FONT_S, anchor="w").pack(fill="x", padx=8, pady=(0, 2))
         self.section(body, "SESSION")
-        self.item(body, "✎", "Rename", "/rename", True, lambda: self.pick(sess, "rename"))
-        self.item(body, "⇲", "Compact", "/compact", idle, lambda: self.pick(sess, "compact"))
-        self.item(body, "⌫", "Clear", "/clear", idle, lambda: self.pick(sess, "clear"), danger=True)
+        self.item(body, "\uE70F", "Rename", "/rename", True, lambda: self.pick(sess, "rename"))
+        self.item(body, "\uE8FD", "Plan mode", "/plan", idle, lambda: self.pick(sess, "plan"))
+        self.item(body, "\uE73F", "Compact", "/compact", idle, lambda: self.pick(sess, "compact"))
+        self.item(body, "\uE74D", "Clear", "/clear", idle, lambda: self.pick(sess, "clear"), danger=True)
         self.section(body, "MODEL")
         for label, alias in MODELS.items():
-            self.item(body, "◆", label, f"/model {alias}", idle, lambda a=alias: self.pick(sess, "model", a))
+            self.item(body, "\uE945", label, f"/model {alias}", idle, lambda a=alias: self.pick(sess, "model", a))
         self.section(body, "EFFORT")
         self.chips(body, [(label, lambda a=arg: self.pick(sess, "effort", a)) for label, arg in EFFORTS.items()])
 
     def section(self, body, text):
-        tk.Label(body, text=text, bg=BG, fg=DIM, font=("Segoe UI Semibold", 7), anchor="w").pack(
-            fill="x", padx=8, pady=(6, 1))
+        tk.Label(body, text=text, bg=BG, fg=DIM, font=FONT_CAP, anchor="w").pack(fill="x", padx=10, pady=(10, 2))
 
     def chips(self, body, buttons):
-        """A row of small buttons, equal width, for short choices like effort levels."""
+        """A segmented row of equal-width buttons, for short choices like effort levels."""
         row = tk.Frame(body, bg=BG, width=MENU_W)
-        row.pack(fill="x", padx=6, pady=(2, 4))
+        row.pack(fill="x", padx=8, pady=(2, 6))
         for n, (label, command) in enumerate(buttons):
             row.columnconfigure(n, weight=1, uniform="chip")
-            b = tk.Label(row, text=label, bg=HOVER, fg=FG, font=FONT_S, pady=5, cursor="hand2")
-            b.grid(row=0, column=n, sticky="ew", padx=2)
-            b.bind("<Enter>", lambda _e, w=b: w.configure(bg=ACCENT, fg="#101322"))
-            b.bind("<Leave>", lambda _e, w=b: w.configure(bg=HOVER, fg=FG))
+            b = tk.Label(row, text=label, bg=SEG, fg=MUTED, font=FONT_S, pady=6, cursor="hand2")
+            b.grid(row=0, column=n, sticky="ew", padx=1)
+            b.bind("<Enter>", lambda _e, w=b: w.configure(bg=ACCENT, fg="#10122a"))
+            b.bind("<Leave>", lambda _e, w=b: w.configure(bg=SEG, fg=MUTED))
             b.bind("<ButtonRelease-1>", lambda _e, c=command: c())
 
     def item(self, body, icon, label, hint, enabled, command, danger=False):
-        fg = (DANGER if danger else FG) if enabled else DIM
-        row = tk.Frame(body, bg=BG, width=MENU_W, height=28, cursor="hand2" if enabled else "arrow")
+        tone = DANGER if danger else ACCENT
+        row = tk.Frame(body, bg=BG, width=MENU_W, height=32, cursor="hand2" if enabled else "arrow")
         row.pack(fill="x")
         row.pack_propagate(False)
+        bar = tk.Frame(row, bg=BG, width=3)
+        bar.pack(side="left", fill="y")
         parts = [
-            tk.Label(row, text=icon, bg=BG, fg=(DANGER if danger else ACCENT) if enabled else DIM, font=FONT, width=2),
-            tk.Label(row, text=label, bg=BG, fg=fg, font=FONT, anchor="w"),
+            tk.Label(row, text=icon, bg=BG, fg=tone if enabled else DIM, font=(ICONS, 10), width=3),
+            tk.Label(row, text=label, bg=BG, fg=(DANGER if danger else FG) if enabled else DIM, font=FONT, anchor="w"),
             tk.Label(row, text=hint, bg=BG, fg=DIM if enabled else BG, font=FONT_S),
         ]
         parts[0].pack(side="left", padx=(4, 2))
         parts[1].pack(side="left", fill="x", expand=True)
-        parts[2].pack(side="right", padx=(0, 8))
+        parts[2].pack(side="right", padx=(0, 10))
         if not enabled:
             return
         widgets = [row] + parts
 
-        def paint(color):
+        def paint(color, edge):
             for w in widgets:
                 w.configure(bg=color)
+            bar.configure(bg=edge)
 
         for w in widgets:
-            w.bind("<Enter>", lambda _e: paint(HOVER))
-            w.bind("<Leave>", lambda _e: paint(BG))
+            w.bind("<Enter>", lambda _e: paint(HOVER, tone))
+            w.bind("<Leave>", lambda _e: paint(BG, BG))
             w.bind("<ButtonRelease-1>", lambda _e: command())
 
     def pick(self, sess, action, arg=None):
