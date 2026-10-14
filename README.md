@@ -48,7 +48,7 @@ pythonw claude_tab.pyw       # run now, in the background
 .\install_startup.ps1        # optional: also start at logon
 ```
 
-**Build the installer yourself:** `.uild.ps1` installs PyInstaller (through the Intel proxy
+**Build the installer yourself:** `.build.ps1` installs PyInstaller (through the Intel proxy
 by default; set `HTTPS_PROXY` to override) and writes `dist\ClaudeTabSetup.exe`.
 
 - Stop ClaudeTab by ending `ClaudeTab.exe` (or `pythonw.exe` when run from source) in Task Manager.
