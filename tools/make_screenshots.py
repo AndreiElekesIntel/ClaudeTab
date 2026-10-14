@@ -106,7 +106,7 @@ if __name__ == "__main__":
     except Exception:
         pass
     os.makedirs(OUT, exist_ok=True)
-    shot("menu-idle.png", [{"pid": 1, "name": "sync-backoff", "status": "idle"}])
-    shot("menu-busy.png", [{"pid": 1, "name": "sync-backoff", "status": "busy"}])
-    shot("menu-multi.png", [{"pid": 1, "name": "sync-backoff", "status": "idle"},
-                            {"pid": 2, "name": "docs-cleanup", "status": "busy"}], H=800)
+    shot("menu-idle.png", [{"pid": 1, "name": "sync-backoff", "status": "idle", "model": "opus", "effort": "high"}])
+    shot("menu-busy.png", [{"pid": 1, "name": "sync-backoff", "status": "busy", "model": "sonnet", "effort": "medium"}])
+    shot("menu-multi.png", [{"pid": 1, "name": "sync-backoff", "status": "idle", "model": "opus", "effort": "high"},
+                            {"pid": 2, "name": "docs-cleanup", "status": "busy", "model": "sonnet", "effort": "medium"}], H=800)

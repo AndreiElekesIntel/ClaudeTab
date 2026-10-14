@@ -23,6 +23,7 @@ to it.
 """
 import ctypes
 import ctypes.wintypes as wt
+import glob
 import json
 import os
 import re
@@ -56,6 +57,7 @@ FG, MUTED, DIM, DANGER, ACCENT = "#e9ebf5", "#9097b3", "#5a6080", "#f27d83", "#8
 GOOD, GOOD_BG, WARN, WARN_BG = "#6fdca0", "#163226", "#f2b862", "#38301a"
 FONT, FONT_B, FONT_S = ("Segoe UI", 10), ("Segoe UI Semibold", 10), ("Segoe UI", 8)
 FONT_CAP = ("Segoe UI Semibold", 7)
+ON_ACCENT = "#10122a"
 ICONS = "Segoe MDL2 Assets"  # ships with Windows 10 and 11
 MENU_W = 264
 
@@ -184,6 +186,33 @@ def load_sessions():
     return out
 
 
+def config_dir():
+    return os.environ.get("CLAUDE_CONFIG_DIR") or os.path.join(os.path.expanduser("~"), ".claude")
+
+
+def transcript_model(session_id):
+    """Model alias ("opus"/"sonnet"/"haiku") of the session's latest reply, or None.
+
+    Claude Code logs every reply with its model in projects/<project>/<sessionId>.jsonl.
+    Only the tail is read. A /model switch shows up here after the next reply.
+    """
+    if not session_id:
+        return None
+    for path in glob.glob(os.path.join(config_dir(), "projects", "*", session_id + ".jsonl")):
+        try:
+            with open(path, "rb") as f:
+                f.seek(0, os.SEEK_END)
+                f.seek(max(0, f.tell() - 262144))
+                tail = f.read().decode("utf-8", "ignore")
+        except OSError:
+            continue
+        for mid in reversed(re.findall(r'"model":"([^"]+)"', tail)):
+            for alias in ("opus", "sonnet", "haiku"):
+                if alias in mid.lower():
+                    return alias
+    return None
+
+
 # ---------------------------------------------------------------- injection
 def build_command(action, arg):
     """Allowlisted slash command, or None. Never a newline."""
@@ -259,6 +288,9 @@ class App:
         self.sessions, self.refreshed = [], 0.0
         self.matches, self.shown_hwnd, self.menu_open = [], None, False
         self.panel, self.menu_owner = None, None
+        # What this menu last set, per pid. Claude Code does not publish the current
+        # effort anywhere readable, and a model switch is only logged on the next reply.
+        self.chosen = {}
         self.tick()
 
     @staticmethod
@@ -323,7 +355,7 @@ class App:
         for n, sess in enumerate(self.matches):
             if n:
                 tk.Frame(body, bg=BORDER, height=1).pack(fill="x", pady=6)
-            self.session_block(body, sess)
+            self.session_block(body, self.with_current(sess))
         panel.update_idletasks()
         x = self.handle.winfo_rootx() + HANDLE_W - panel.winfo_reqwidth()
         y = self.handle.winfo_rooty() + HANDLE_H + 4
@@ -333,6 +365,14 @@ class App:
         self.panel, self.menu_open = panel, True
         self.btn.configure(text="Claude  ▴")
         self.watch_menu()
+
+    def with_current(self, sess):
+        """`sess` plus the model/effort to highlight (None = unknown)."""
+        mine = self.chosen.get(sess["pid"], {})
+        model = transcript_model(sess["id"])
+        if "model" in mine and model == mine["model"][1]:  # no reply since our switch
+            model = mine["model"][0]
+        return dict(sess, model=model, effort=mine.get("effort"))
 
     def session_block(self, body, sess):
         idle = sess["status"] == "idle"
@@ -351,9 +391,11 @@ class App:
         self.item(body, "\uE74D", "Clear", "/clear", idle, lambda: self.pick(sess, "clear"), danger=True)
         self.section(body, "MODEL")
         for label, alias in MODELS.items():
-            self.item(body, "\uE945", label, f"/model {alias}", idle, lambda a=alias: self.pick(sess, "model", a))
+            self.item(body, "\uE945", label, f"/model {alias}", idle, lambda a=alias: self.pick(sess, "model", a),
+                      current=sess.get("model") == alias)
         self.section(body, "EFFORT")
-        self.chips(body, [(label, lambda a=arg: self.pick(sess, "effort", a)) for label, arg in EFFORTS.items()])
+        self.chips(body, [(label, lambda a=arg: self.pick(sess, "effort", a), sess.get("effort") == arg)
+                          for label, arg in EFFORTS.items()])
 
     def section(self, body, text):
         tk.Label(body, text=text, bg=BG, fg=DIM, font=FONT_CAP, anchor="w").pack(fill="x", padx=10, pady=(10, 2))
@@ -362,25 +404,30 @@ class App:
         """A segmented row of equal-width buttons, for short choices like effort levels."""
         row = tk.Frame(body, bg=BG, width=MENU_W)
         row.pack(fill="x", padx=8, pady=(2, 6))
-        for n, (label, command) in enumerate(buttons):
+        for n, (label, command, current) in enumerate(buttons):
             row.columnconfigure(n, weight=1, uniform="chip")
-            b = tk.Label(row, text=label, bg=SEG, fg=MUTED, font=FONT_S, pady=6, cursor="hand2")
+            bg, fg = (ACCENT, ON_ACCENT) if current else (SEG, MUTED)
+            b = tk.Label(row, text=label, bg=bg, fg=fg, pady=6, cursor="hand2",
+                         font=("Segoe UI Semibold", 8) if current else FONT_S)
             b.grid(row=0, column=n, sticky="ew", padx=1)
-            b.bind("<Enter>", lambda _e, w=b: w.configure(bg=ACCENT, fg="#10122a"))
-            b.bind("<Leave>", lambda _e, w=b: w.configure(bg=SEG, fg=MUTED))
+            b.bind("<Enter>", lambda _e, w=b: w.configure(bg=ACCENT, fg=ON_ACCENT))
+            b.bind("<Leave>", lambda _e, w=b, bg=bg, fg=fg: w.configure(bg=bg, fg=fg))
             b.bind("<ButtonRelease-1>", lambda _e, c=command: c())
 
-    def item(self, body, icon, label, hint, enabled, command, danger=False):
+    def item(self, body, icon, label, hint, enabled, command, danger=False, current=False):
         tone = DANGER if danger else ACCENT
-        row = tk.Frame(body, bg=BG, width=MENU_W, height=32, cursor="hand2" if enabled else "arrow")
+        rest = HOVER if current else BG  # the active choice stays lit
+        row = tk.Frame(body, bg=rest, width=MENU_W, height=32, cursor="hand2" if enabled else "arrow")
         row.pack(fill="x")
         row.pack_propagate(False)
-        bar = tk.Frame(row, bg=BG, width=3)
+        bar = tk.Frame(row, bg=ACCENT if current else rest, width=3)
         bar.pack(side="left", fill="y")
         parts = [
-            tk.Label(row, text=icon, bg=BG, fg=tone if enabled else DIM, font=(ICONS, 10), width=3),
-            tk.Label(row, text=label, bg=BG, fg=(DANGER if danger else FG) if enabled else DIM, font=FONT, anchor="w"),
-            tk.Label(row, text=hint, bg=BG, fg=DIM if enabled else BG, font=FONT_S),
+            tk.Label(row, text=icon, bg=rest, fg=tone if enabled else DIM, font=(ICONS, 10), width=3),
+            tk.Label(row, text=label, bg=rest, fg=(DANGER if danger else FG) if enabled else DIM,
+                     font=FONT_B if current else FONT, anchor="w"),
+            tk.Label(row, text="● current" if current else hint, bg=rest,
+                     fg=ACCENT if current else (DIM if enabled else BG), font=FONT_S),
         ]
         parts[0].pack(side="left", padx=(4, 2))
         parts[1].pack(side="left", fill="x", expand=True)
@@ -396,7 +443,7 @@ class App:
 
         for w in widgets:
             w.bind("<Enter>", lambda _e: paint(HOVER, tone))
-            w.bind("<Leave>", lambda _e: paint(BG, BG))
+            w.bind("<Leave>", lambda _e: paint(rest, ACCENT if current else rest))
             w.bind("<ButtonRelease-1>", lambda _e: command())
 
     def pick(self, sess, action, arg=None):
@@ -451,7 +498,16 @@ class App:
             # empty prompt box does nothing, so a missing prompt is harmless.
             for delay in CONFIRM_DELAYS_MS:
                 self.root.after(delay, lambda pid=s["pid"]: send_to_console(pid, ""))
+        if ok:
+            self.remember(s, text)
         self.toast(f"Sent {text}" if ok else f"Failed: {why}")
+
+    def remember(self, s, text):
+        mine = self.chosen.setdefault(s["pid"], {})
+        if text.startswith("/model "):
+            mine["model"] = (text.split()[1], transcript_model(s["id"]))
+        elif text.startswith("/effort "):
+            mine["effort"] = text.split()[1]
 
     def toast(self, msg):
         t = tk.Toplevel(self.root)

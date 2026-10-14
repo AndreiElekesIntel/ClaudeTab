@@ -55,6 +55,14 @@ by default; set `HTTPS_PROXY` to override) and writes `dist\ClaudeTabSetup.exe`.
 - Stop ClaudeTab by ending `ClaudeTab.exe` (or `pythonw.exe` when run from source) in Task Manager.
 - Only one copy runs at a time; a second launch exits immediately.
 
+## What's highlighted
+
+The current **model** and **effort** are lit in the menu. The model is read from the session's
+transcript (the model of its latest reply), so a `/model` switch typed by hand shows up after
+the next reply; a switch made from ClaudeTab shows immediately. Claude Code doesn't publish the
+current effort anywhere readable, so effort is lit only once you have set it from ClaudeTab in
+that session; before that, nothing is highlighted.
+
 ## How it works
 
 - **Sessions** come from `~/.claude/sessions/<pid>.json`, written by Claude Code itself
