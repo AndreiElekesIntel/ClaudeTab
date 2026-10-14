@@ -33,17 +33,25 @@ If one window hosts several sessions (and the window title doesn't pick one), ea
 
 ## Install
 
-Requirements: Windows 10/11, Python 3.8+ with tkinter (included in the python.org installer).
+**Easiest:** download `ClaudeTabSetup.exe` from the [Releases](../../releases) page and double-click it.
+It needs no admin rights, no Python and downloads nothing. It installs to
+`%LOCALAPPDATA%\ClaudeTab`, adds Start Menu / Startup (and optional Desktop) shortcuts,
+registers in *Installed apps* and starts ClaudeTab. Remove it from *Installed apps*, or run
+`ClaudeTabSetup.exe --uninstall`. Silent install: `ClaudeTabSetup.exe --silent [--desktop] [--no-startup]`.
+
+**From source** (Windows 10/11, Python 3.8+ with tkinter):
 
 ```powershell
-git clone <this repo>
-cd claude-tab
-pythonw claude_tab.pyw            # run now, in the background
+git clone https://github.com/AndreiElekesIntel/ClaudeTab
+cd ClaudeTab
+pythonw claude_tab.pyw       # run now, in the background
 .\install_startup.ps1        # optional: also start at logon
 ```
 
-- `install_startup.ps1` puts `ClaudeTab.lnk` in your Startup folder and (re)starts ClaudeTab. Delete the shortcut to undo.
-- Stop it by ending `pythonw.exe` in Task Manager.
+**Build the installer yourself:** `.uild.ps1` installs PyInstaller (through the Intel proxy
+by default; set `HTTPS_PROXY` to override) and writes `dist\ClaudeTabSetup.exe`.
+
+- Stop ClaudeTab by ending `ClaudeTab.exe` (or `pythonw.exe` when run from source) in Task Manager.
 - Only one copy runs at a time; a second launch exits immediately.
 
 ## How it works
