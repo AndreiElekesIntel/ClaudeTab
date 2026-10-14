@@ -66,12 +66,39 @@ def make_shortcut(lnk, target, workdir):
 
 
 def stop_running():
-    run(["taskkill", "/F", "/IM", EXE])
+    run(["taskkill", "/F", "/T", "/IM", EXE])
+    for _ in range(10):  # wait for Windows to actually let go of the exe
+        if not running():
+            break
+        time.sleep(0.3)
     # earlier script-based builds ran under pythonw
     run(["powershell", "-NoProfile", "-Command",
          "Get-CimInstance Win32_Process | Where-Object { $_.Name -like 'pythonw*' -and "
          "$_.CommandLine -match 'claude_tab.pyw|perch.pyw|claude_menu.pyw' } | "
          "ForEach-Object { Stop-Process -Id $_.ProcessId -Force }"])
+
+
+class InUse(Exception):
+    """A file we need to replace is held open (WinError 32), usually by a running ClaudeTab."""
+
+
+def running():
+    """True while any ClaudeTab.exe process exists."""
+    out = run(["tasklist", "/FI", f"IMAGENAME eq {EXE}", "/FO", "CSV", "/NH"]).stdout
+    return EXE.lower() in out.lower()
+
+
+def replace_file(src, dst, tries=12):
+    """copy2 that waits for a just-killed process to release `dst`; raises InUse if it never does."""
+    for n in range(tries):
+        try:
+            shutil.copy2(src, dst)
+            return
+        except PermissionError as e:
+            if getattr(e, "winerror", None) not in (5, 32):
+                raise
+            time.sleep(0.5)
+    raise InUse(dst)
 
 
 def default_dir():
@@ -122,13 +149,13 @@ def install_steps(dest, startup, desktop, start):
 
     def copy_app():
         os.makedirs(dest, exist_ok=True)
-        shutil.copy2(bundled(EXE), app_exe)
+        replace_file(bundled(EXE), app_exe)
 
     def copy_uninstaller():
         # Setup rerun from the installed copy cannot overwrite itself; it is already current enough
         # to uninstall, and the next upgrade comes from a fresh download anyway.
         if getattr(sys, "frozen", False) and not same_file(sys.executable, uninstaller):
-            shutil.copy2(sys.executable, uninstaller)
+            replace_file(sys.executable, uninstaller)
 
     def shortcuts():
         make_shortcut(links["menu"], app_exe, dest)
@@ -342,6 +369,8 @@ class Window:
                 time.sleep(0.35)  # long enough to read, short enough not to drag
                 self.events.put(("done", n + 1, label))
             self.events.put(("finished",))
+        except InUse as e:
+            self.events.put(("inuse", str(e)))
         except Exception as e:
             self.events.put(("error", str(e)))
 
@@ -358,6 +387,9 @@ class Window:
                 elif ev[0] == "finished":
                     self.busy = False
                     return self.root.after(450, self.show_done)
+                elif ev[0] == "inuse":
+                    self.busy = False
+                    return self.show_in_use(ev[1])
                 elif ev[0] == "error":
                     self.busy = False
                     return self.show_error(ev[1])
@@ -375,6 +407,12 @@ class Window:
             self.title(head, "It is running now. Open a Claude Code terminal and look for the "
                        "Claude ▾ tab at the top-right of its window.", GOOD)
         self.buttons(("Close", self.root.destroy, True))
+
+    def show_in_use(self, path):
+        self.clear()
+        self.title("ClaudeTab is still running", f"Setup could not replace {os.path.basename(path)} because "
+                   "it is in use. Close ClaudeTab (end ClaudeTab.exe in Task Manager), then continue.", ("#f2b862"))
+        self.buttons(("Cancel", self.close, False), ("I've closed it, continue", self.begin, True))
 
     def show_error(self, msg):
         self.clear()
