@@ -40,6 +40,12 @@ It needs no admin rights, no Python and downloads nothing. It installs to
 registers in *Installed apps* and starts ClaudeTab. Remove it from *Installed apps*, or run
 `ClaudeTabSetup.exe --uninstall`. Silent install: `ClaudeTabSetup.exe --silent [--desktop] [--no-startup]`.
 
+To **upgrade**, run a newer `ClaudeTabSetup.exe` over the top: it detects the installed version,
+shows `Installed 0.3.0 → new 0.4.0`, keeps your shortcut choices and upgrades in place.
+Install, upgrade and uninstall all run in one window with a progress bar:
+
+![Upgrade page](docs/installer-upgrade-options.png) ![Progress](docs/installer-upgrade-progress.png)
+
 **From source** (Windows 10/11, Python 3.8+ with tkinter):
 
 ```powershell

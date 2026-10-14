@@ -28,7 +28,7 @@ if ($LASTEXITCODE) { throw 'building ClaudeTab.exe failed' }
 
 # 2. the installer, with the app inside
 & $py -m PyInstaller --noconfirm --onefile --noconsole --name ClaudeTabSetup `
-    --icon assets\claudetab.ico --add-data "dist\ClaudeTab.exe;." installer\setup.py
+    --icon assets\claudetab.ico --add-data "dist\ClaudeTab.exe;." --add-data "assets\claudetab.ico;." installer\setup.py
 if ($LASTEXITCODE) { throw 'building ClaudeTabSetup.exe failed' }
 
 Get-Item dist\ClaudeTabSetup.exe | Select-Object Name, @{n='MB';e={[math]::Round($_.Length/1MB,1)}}
