@@ -1,7 +1,7 @@
 """
-Perch — a small menu on every Claude Code terminal window.
+ClaudeTab — a small menu on every Claude Code terminal window.
 
-Runs in the background (double-click, or `pythonw perch.pyw`). Whenever the
+Runs in the background (double-click, or `pythonw claude_tab.pyw`). Whenever the
 window you are in hosts a live Claude Code session, a little "Claude" handle
 appears at its top-right. Click it for: Rename, Compact, Clear, Opus, Sonnet.
 Stdlib only (tkinter + ctypes), Windows only.
@@ -108,7 +108,7 @@ class INPUT_RECORD(ctypes.Structure):
 def log(msg):
     """pythonw has no stderr, so errors go to a file next to the temp dir."""
     try:
-        with open(os.path.join(os.environ.get("TEMP", "."), "perch.log"), "a", encoding="utf-8") as f:
+        with open(os.path.join(os.environ.get("TEMP", "."), "claude_tab.log"), "a", encoding="utf-8") as f:
             f.write(time.strftime("%H:%M:%S ") + msg + "\n")
     except OSError:
         pass

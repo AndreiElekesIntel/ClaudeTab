@@ -17,10 +17,10 @@ from PIL import ImageGrab
 
 ROOT = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 OUT = os.path.join(ROOT, "docs")
-loader = importlib.machinery.SourceFileLoader("perch", os.path.join(ROOT, "perch.pyw"))
-spec = importlib.util.spec_from_loader("perch", loader)
-perch = importlib.util.module_from_spec(spec)
-loader.exec_module(perch)
+loader = importlib.machinery.SourceFileLoader("claude_tab", os.path.join(ROOT, "claude_tab.pyw"))
+spec = importlib.util.spec_from_loader("claude_tab", loader)
+claude_tab = importlib.util.module_from_spec(spec)
+loader.exec_module(claude_tab)
 
 TERM_BG, TERM_FG, TERM_DIM = "#0c0c0c", "#cccccc", "#767676"
 W = 920
@@ -54,30 +54,30 @@ def shot(name, sessions, H=470):
         tk.Label(body, text=text, bg=TERM_BG, fg=color, font=("Cascadia Mono", 11), anchor="w").pack(fill="x")
     root.update()
 
-    app = perch.App.__new__(perch.App)
+    app = claude_tab.App.__new__(claude_tab.App)
     app.pick = lambda *a, **k: None
 
     # handle, positioned exactly like App.tick does
     x0, y0 = root.winfo_rootx(), root.winfo_rooty()
-    hx, hy = x0 + W - perch.OFFSET_RIGHT - perch.HANDLE_W, y0 + perch.OFFSET_TOP
+    hx, hy = x0 + W - claude_tab.OFFSET_RIGHT - claude_tab.HANDLE_W, y0 + claude_tab.OFFSET_TOP
     handle = tk.Toplevel(root, bg="#5b5bd6")
     handle.overrideredirect(True)
-    handle.geometry(f"{perch.HANDLE_W}x{perch.HANDLE_H}+{hx}+{hy}")
+    handle.geometry(f"{claude_tab.HANDLE_W}x{claude_tab.HANDLE_H}+{hx}+{hy}")
     tk.Button(handle, text="Claude  ▴", relief="flat", bg="#5b5bd6", fg="white", bd=0, padx=6,
               font=("Segoe UI", 9, "bold")).pack(fill="both", expand=True)
 
     # dropdown, built like App.on_click
-    panel = tk.Toplevel(root, bg=perch.BORDER)
+    panel = tk.Toplevel(root, bg=claude_tab.BORDER)
     panel.overrideredirect(True)
-    inner = tk.Frame(panel, bg=perch.BG, padx=6, pady=6)
+    inner = tk.Frame(panel, bg=claude_tab.BG, padx=6, pady=6)
     inner.pack(fill="both", expand=True, padx=1, pady=1)
     for n, sess in enumerate(sessions):
         if n:
-            tk.Frame(inner, bg=perch.BORDER, height=1).pack(fill="x", pady=6)
+            tk.Frame(inner, bg=claude_tab.BORDER, height=1).pack(fill="x", pady=6)
         app.session_block(inner, sess)
     panel.update_idletasks()
-    px = hx + perch.HANDLE_W - panel.winfo_reqwidth()
-    py = hy + perch.HANDLE_H + 4
+    px = hx + claude_tab.HANDLE_W - panel.winfo_reqwidth()
+    py = hy + claude_tab.HANDLE_H + 4
     panel.geometry(f"+{px}+{py}")
     for w in (root, handle, panel):
         w.attributes("-topmost", True)

@@ -1,11 +1,11 @@
-# Perch
+# ClaudeTab
 
-A small **Claude ▾** handle that perches on the top-right corner of any Windows terminal
+A small **Claude ▾** tab that sits on the top-right corner of any Windows terminal
 window running a live [Claude Code](https://claude.com/claude-code) session. Click it to
 rename, compact or clear the session, or switch between Opus and Sonnet — without typing
 a slash command.
 
-![Perch menu open on a terminal window](docs/menu-idle.png)
+![ClaudeTab menu open on a terminal window](docs/menu-idle.png)
 
 - **Zero dependencies** — Python 3 standard library only (`tkinter` + `ctypes`).
 - **Doesn't steal focus** — the handle and menu never take focus from your terminal.
@@ -36,12 +36,12 @@ Requirements: Windows 10/11, Python 3.8+ with tkinter (included in the python.or
 
 ```powershell
 git clone <this repo>
-cd perch
-pythonw perch.pyw            # run now, in the background
+cd claude-tab
+pythonw claude_tab.pyw            # run now, in the background
 .\install_startup.ps1        # optional: also start at logon
 ```
 
-- `install_startup.ps1` puts `Perch.lnk` in your Startup folder and (re)starts Perch. Delete the shortcut to undo.
+- `install_startup.ps1` puts `ClaudeTab.lnk` in your Startup folder and (re)starts ClaudeTab. Delete the shortcut to undo.
 - Stop it by ending `pythonw.exe` in Task Manager.
 - Only one copy runs at a time; a second launch exits immediately.
 
@@ -60,14 +60,14 @@ pythonw perch.pyw            # run now, in the background
 
 ## Settings
 
-Constants at the top of `perch.pyw`: `MODELS`, `SIMPLE`, `CONFIRMED`, `CONFIRM_DELAYS_MS`,
+Constants at the top of `claude_tab.pyw`: `MODELS`, `SIMPLE`, `CONFIRMED`, `CONFIRM_DELAYS_MS`,
 `OFFSET_RIGHT` / `OFFSET_TOP` (handle position) and the colour constants (`BG`, `HOVER`, `ACCENT`, …).
 
 ## Limits
 
 - A half-typed draft in the prompt box gets the command appended to it.
 - Windows only; the console-injection approach has no macOS/Linux equivalent here.
-- Errors go to `%TEMP%\perch.log`.
+- Errors go to `%TEMP%\claude_tab.log`.
 
 ## Regenerating the screenshots
 
