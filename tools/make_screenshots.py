@@ -75,6 +75,7 @@ def shot(name, sessions, H=470):
         if n:
             tk.Frame(inner, bg=claude_tab.BORDER, height=1).pack(fill="x", pady=6)
         app.session_block(inner, sess)
+    app.footer(inner)
     panel.update_idletasks()
     px = hx + claude_tab.HANDLE_W - panel.winfo_reqwidth()
     py = hy + claude_tab.HANDLE_H + 4
@@ -109,4 +110,4 @@ if __name__ == "__main__":
     shot("menu-idle.png", [{"pid": 1, "name": "sync-backoff", "status": "idle", "model": "opus", "effort": "high"}])
     shot("menu-busy.png", [{"pid": 1, "name": "sync-backoff", "status": "busy", "model": "sonnet", "effort": "medium"}])
     shot("menu-multi.png", [{"pid": 1, "name": "sync-backoff", "status": "idle", "model": "opus", "effort": "high"},
-                            {"pid": 2, "name": "docs-cleanup", "status": "busy", "model": "sonnet", "effort": "medium"}], H=800)
+                            {"pid": 2, "name": "docs-cleanup", "status": "busy", "model": "sonnet", "effort": "medium"}], H=860)

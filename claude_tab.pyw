@@ -30,6 +30,7 @@ import re
 import sys
 import time
 import tkinter as tk
+import webbrowser
 
 POLL_MS = 150          # foreground check
 REFRESH_S = 2.0        # session list + process tree
@@ -60,6 +61,7 @@ FONT_CAP = ("Segoe UI Semibold", 7)
 ON_ACCENT = "#10122a"
 ICONS = "Segoe MDL2 Assets"  # ships with Windows 10 and 11
 MENU_W = 264
+REPO_URL = "https://github.com/AndreiElekesIntel/ClaudeTab"
 
 k32 = ctypes.WinDLL("kernel32", use_last_error=True)
 u32 = ctypes.WinDLL("user32", use_last_error=True)
@@ -356,6 +358,7 @@ class App:
             if n:
                 tk.Frame(body, bg=BORDER, height=1).pack(fill="x", pady=6)
             self.session_block(body, self.with_current(sess))
+        self.footer(body)
         panel.update_idletasks()
         x = self.handle.winfo_rootx() + HANDLE_W - panel.winfo_reqwidth()
         y = self.handle.winfo_rooty() + HANDLE_H + 4
@@ -365,6 +368,30 @@ class App:
         self.panel, self.menu_open = panel, True
         self.btn.configure(text="Claude  ▴")
         self.watch_menu()
+
+    def footer(self, body):
+        """Quiet link to the project page, under all sessions."""
+        tk.Frame(body, bg=BORDER, height=1).pack(fill="x", pady=(8, 4))
+        row = tk.Frame(body, bg=BG, height=28, cursor="hand2")
+        row.pack(fill="x")
+        row.pack_propagate(False)
+        parts = [tk.Label(row, text="", bg=BG, fg=DIM, font=(ICONS, 9), width=3),
+                 tk.Label(row, text="ClaudeTab on GitHub", bg=BG, fg=MUTED, font=FONT_S, anchor="w"),
+                 tk.Label(row, text="↗", bg=BG, fg=DIM, font=FONT_S)]
+        parts[0].pack(side="left", padx=(6, 0))
+        parts[1].pack(side="left", fill="x", expand=True)
+        parts[2].pack(side="right", padx=(0, 10))
+        for w in [row] + parts:
+            w.bind("<Enter>", lambda _e: [x.configure(fg=ACCENT) for x in parts])
+            w.bind("<Leave>", lambda _e: [x.configure(fg=c) for x, c in zip(parts, (DIM, MUTED, DIM))])
+            w.bind("<ButtonRelease-1>", lambda _e: self.open_repo())
+
+    def open_repo(self):
+        self.close_menu()
+        try:
+            webbrowser.open(REPO_URL)
+        except Exception as e:
+            log(f"open repo failed: {e!r}")
 
     def with_current(self, sess):
         """`sess` plus the model/effort to highlight (None = unknown)."""
