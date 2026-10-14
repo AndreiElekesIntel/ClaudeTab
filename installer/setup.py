@@ -22,7 +22,7 @@ from tkinter import messagebox
 APP = "ClaudeTab"
 EXE = "ClaudeTab.exe"
 SETUP = "ClaudeTabSetup.exe"
-VERSION = "0.3.0"
+VERSION = "0.4.0"
 UNINSTALL_KEY = r"Software\Microsoft\Windows\CurrentVersion\Uninstall\ClaudeTab"
 LEGACY_SHORTCUTS = ("Claude Session Menu.lnk", "Perch.lnk")  # names from earlier builds
 NO_WINDOW = 0x08000000
