@@ -21,8 +21,9 @@ a slash command.
 | Session | Clear   | `/clear`                               |
 | Model   | Opus    | `/model opus` + confirms the prompt    |
 | Model   | Sonnet  | `/model sonnet` + confirms the prompt  |
+| Effort  | Low / Med / High / XHigh / Max | `/effort <level>` + confirms a cache warning if shown |
 
-While a session is busy only **Rename** works; the rest are greyed out:
+While a session is busy only **Rename** and **Effort** work; the rest are greyed out:
 
 ![Busy session](docs/menu-busy.png)
 
@@ -60,7 +61,7 @@ pythonw claude_tab.pyw            # run now, in the background
 
 ## Settings
 
-Constants at the top of `claude_tab.pyw`: `MODELS`, `SIMPLE`, `CONFIRMED`, `CONFIRM_DELAYS_MS`,
+Constants at the top of `claude_tab.pyw`: `MODELS`, `EFFORTS`, `SIMPLE`, `CONFIRMED`, `CONFIRM_DELAYS_MS`,
 `OFFSET_RIGHT` / `OFFSET_TOP` (handle position) and the colour constants (`BG`, `HOVER`, `ACCENT`, …).
 
 ## Limits
